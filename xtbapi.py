@@ -5,7 +5,7 @@ class trader:
     def __init__(self, webaddres = "wss://ws.xapi.pro/demo"):
         self.ws = create_connection("wss://ws.xapi.pro/demo")
         self._balance = {}
-
+        self._open_trades = {}
     def login(self, id, password):
         d = {
         	"command" : "login",
@@ -99,8 +99,26 @@ class trader:
                 "arguments": {
                 	"openedOnly": opened_only}}
         self.ws.send(json.dumps(query))
-        result = json.loads(self.ws.recv())
-        print(result)
+        result = json.loads(self.ws.recv())['returnData']
+        for trade in range(len(result)):
+            info = result[trade]
+            single_trade_details = {
+                    'symbol': info["symbol"],
+                    'open_price': info['open_price'],
+                    'volume': info['volume'],
+                    'profit': info['profit'],
+                    'order_open': info['order'],
+                    'order_close': info['order']
+            }
+            if info['cmd'] == 0:
+                single_trade_details['position'] = "long"
+            else:
+                single_trade_details['position'] = "short"
+            try:
+                self._open_trades[info['symbol']].append(single_trade_details)
+            except:
+                self._open_trades[info['symbol']] = [single_trade_details]
+
 
     def _check_trade_status(self, order):
         query = {
@@ -110,6 +128,10 @@ class trader:
         self.ws.send(json.dumps(query))
         result = json.loads(self.ws.recv())
         return result['returnData']['message']
+
+    def print_opened_trades(self):
+        pass
+
 
     def close_trade(self, order):
         price = self.get_symbol_data(symbol)['returnData']['ask']
@@ -139,15 +161,3 @@ class trader:
             print("Error with sending order")
         message = self._check_trade_status(order_number)
         print(message)
-
-'''
-Test usage
-trader2 = trader()
-trader2.login("login","password")
-
-trader2.refresh_balance()
-trader2.buy_symbol("US100", 0.1)
-
-
-trader2.get_opened_trades()
-'''
