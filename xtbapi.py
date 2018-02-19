@@ -5,7 +5,7 @@ class trader:
     def __init__(self, webaddres = "wss://ws.xapi.pro/demo"):
         self.ws = create_connection("wss://ws.xapi.pro/demo")
         self._balance = {}
-        self._open_trades = {}
+        self._opened_trades = {}
     def login(self, id, password):
         d = {
         	"command" : "login",
@@ -115,9 +115,9 @@ class trader:
             else:
                 single_trade_details['position'] = "short"
             try:
-                self._open_trades[info['symbol']].append(single_trade_details)
+                self._opened_trades[info['symbol']].append(single_trade_details)
             except:
-                self._open_trades[info['symbol']] = [single_trade_details]
+                self._opened_trades[info['symbol']] = [single_trade_details]
 
 
     def _check_trade_status(self, order):
@@ -133,8 +133,13 @@ class trader:
         pass
 
 
-    def close_trade(self, order):
+    #This has to delete entry in self._opened_trades as well
+    def close_trade(self, order, symbol):
         price = self.get_symbol_data(symbol)['returnData']['ask']
+        for i in range(len(self._opened_trades[symbol])):
+            if self._opened_trades[symbol][i]['order_close'] == order:
+                volume = self._opened_trades[symbol][i]['volume']
+                number = i
         TRADE_TRANS_INFO = {
             "cmd": 0,
             "customComment": "my_comment",
@@ -142,9 +147,9 @@ class trader:
             "offset": 0,
             "order": order,
             "price": price,
-            "sl" : sl,
+            "sl" : 0,
             "symbol": symbol,
-            "tp" : tp,
+            "tp" : 0,
             "type": 2,
             "volume": volume}
 
@@ -154,9 +159,11 @@ class trader:
 		              "tradeTransInfo": TRADE_TRANS_INFO}}
         self.ws.send(json.dumps(query))
         result = json.loads(self.ws.recv())
+        print(result)
         order_number = result['returnData']['order']
         if result['status']:
             print("Order sent")
+            del self._opened_trades[symbol][number]
         else:
             print("Error with sending order")
         message = self._check_trade_status(order_number)
