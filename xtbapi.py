@@ -18,6 +18,8 @@ class trader:
         result = json.loads(self.ws.recv())
         if result['status']:
             print("Logged in correctly")
+            self.get_opened_trades()
+            self.refresh_balance()
         else:
             print("Login failed")
 
@@ -132,7 +134,31 @@ class trader:
     def print_opened_trades(self):
         pass
 
-
+    def close_all_symbol(self, symbol):
+        price = self.get_symbol_data(symbol)['returnData']['ask']
+        for i in range(len(self._opened_trades[symbol])):
+            volume = self._opened_trades[symbol][i]['volume']
+            order = self._opened_trades[symbol][i]['order_close']
+            TRADE_TRANS_INFO = {
+                "cmd": 0,
+                "customComment": "my_comment",
+                "expiration": 0,
+                "offset": 0,
+                "order": order,
+                "price": price,
+                "sl" : 0,
+                "symbol": symbol,
+                "tp" : 0,
+                "type": 2,
+                "volume": volume}
+            query = {
+    	       "command": "tradeTransaction",
+    	       "arguments": {
+    		              "tradeTransInfo": TRADE_TRANS_INFO}}
+            self.ws.send(json.dumps(query))
+            result = json.loads(self.ws.recv())
+            print(result)
+        self._opened_trades[symbol] = []
     #This has to delete entry in self._opened_trades as well
     def close_trade(self, order, symbol):
         price = self.get_symbol_data(symbol)['returnData']['ask']
