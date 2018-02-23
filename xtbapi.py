@@ -158,7 +158,7 @@ class trader:
             self.ws.send(json.dumps(query))
             result = json.loads(self.ws.recv())
             print(result)
-        self._opened_trades[symbol] = []
+        del self._opened_trades[symbol]
     #This has to delete entry in self._opened_trades as well
     def close_trade(self, order, symbol):
         price = self.get_symbol_data(symbol)['returnData']['ask']
